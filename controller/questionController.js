@@ -3,23 +3,35 @@ const Question = require('./../model/questionModel');
 
 
 
-exports.getAll = async(req, res, next) => {
-    try{
-        const question = await Question.find();
-        res.status(200).json({
-            status: 'success',
-            results: question.length,
-            data: question
-        })
+exports.getAll = async (req, res, next) => {
+    try {
+      const result = await Question.find();
+  
+      // Extract questions from the nested structure if needed
+      const questions = result[0] ? result[0].questions : result;
+  
+      // Format the questions to include 'id' as a string
+      const formattedQuestions = questions.map(question => ({
+        question: question.question,
+        options: question.options,
+        correctOption: question.correctOption,
+        points: question.points,
+        id: question._id.toString()  // Ensure 'id' is a string
+      }));
+  
+      res.status(200).json({
+        status: 'success',
+        results: formattedQuestions.length,
+        data: formattedQuestions
+      });
+    } catch (err) {
+      res.status(404).json({
+        status: 'error',
+        message: err.message
+      });
     }
-    catch(err){
-        res.status(404).json({
-            status: 'error',
-            message: err.message
-        })
-    }
-
-}
+  };
+  
 
 exports.getUserTodos = async(req, res, next) => {
     try{
@@ -40,32 +52,42 @@ exports.getUserTodos = async(req, res, next) => {
 }
 
 exports.createOne = async (req, res, next) => {
-    try{
-        // const question  = await Question.create(req.body);
-        if(!req.user._id) next();
-        
-        const question = await Question.create({
-            question: req.body.question,
-            options: req.body.options,
-            correctOption: req.body.correctOption,
-            points: req.body.points
+    try {
+      if (!req.user || !req.user._id) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Unauthorized'
         });
-
-        res.status(201).json({
-            status: 'success',
-            data: question
-        })
+      }
+  
+      const question = await Question.create({
+        question: req.body.question,
+        options: req.body.options,
+        correctOption: req.body.correctOption,
+        points: req.body.points
+      });
+  
+      // Format the response to match the desired format
+      const formattedQuestion = {
+        question: question.question,
+        options: question.options,
+        correctOption: question.correctOption,
+        points: question.points,
+        id: question._id.toString()  // Ensure 'id' is a string
+      };
+  
+      res.status(201).json({
+        status: 'success',
+        data: formattedQuestion
+      });
+    } catch (err) {
+      res.status(400).json({
+        status: 'error',
+        message: err.message
+      });
     }
-    catch(err){
-        res.status(404).json({
-            status: 'error',
-            data: err
-
-        })
-        
-    }
-
-}
+  };
+  
 
 exports.updateOne = async (req, res, next) => {
     try{
